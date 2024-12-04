@@ -1,0 +1,84 @@
+diff --git a/examples/contact-sensor-app/linux/ContactSensorManager.cpp b/examples/contact-sensor-app/linux/ContactSensorManager.cpp
+new file mode 100644
+index 0000000000..3fabbf9d73
+--- /dev/null
++++ b/examples/contact-sensor-app/linux/ContactSensorManager.cpp
+@@ -0,0 +1,42 @@
++#include "ContactSensorManager.h"
++#include <app/util/attribute-storage.h>
++#include <app/ConcreteAttributePath.h>
++#include <lib/core/CHIPError.h>
++#include <app/clusters/boolean-state-configuration-server/boolean-state-configuration-server.h>
++#include <platform/CHIPDeviceLayer.h>
++#include <iostream>
++
++using namespace chip;
++using namespace chip::app;
++
++CHIP_ERROR ContactSensorManager::SetContactState(ContactState state)
++{
++    mContactState = state;
++
++    if (state == ContactState::kContactDetected)
++    {
++        std::cout << "Contact detected" << std::endl;
++    }
++    else
++    {
++        std::cout << "Contact not detected" << std::endl;
++    }
++    uint8_t value = (state == ContactState::kContactDetected) ? 1 : 0;
++
++	chip::DeviceLayer::PlatformMgr().LockChipStack();
++    Protocols::InteractionModel::Status status = app::Clusters::BooleanState::Attributes::StateValue::Set(1, value);
++	chip::DeviceLayer::PlatformMgr().UnlockChipStack();
++
++    if (status != Protocols::InteractionModel::Status::Success)
++    {
++        std::cerr << "Failed to update attribute: " << std::endl;
++		return CHIP_ERROR_INTERNAL;
++    }
++	
++    return CHIP_NO_ERROR;
++}
++
++ContactSensorManager::ContactState ContactSensorManager::GetContactState() const
++{
++    return mContactState;
++}
+diff --git a/examples/contact-sensor-app/linux/include/ContactSensorManager.h b/examples/contact-sensor-app/linux/include/ContactSensorManager.h
+new file mode 100644
+index 0000000000..3786102122
+--- /dev/null
++++ b/examples/contact-sensor-app/linux/include/ContactSensorManager.h
+@@ -0,0 +1,30 @@
++#ifndef CONTACT_SENSOR_MANAGER_H
++#define CONTACT_SENSOR_MANAGER_H
++
++#include <app/util/af-types.h>
++#include <lib/core/CHIPError.h>
++
++class ContactSensorManager
++{
++public:
++    enum class ContactState
++    {
++        kContactDetected,
++        kContactNotDetected
++    };
++
++    static ContactSensorManager & GetInstance()
++    {
++        static ContactSensorManager instance;
++        return instance;
++    }
++
++    CHIP_ERROR SetContactState(ContactState state);
++    ContactState GetContactState() const;
++
++private:
++    ContactSensorManager() : mContactState(ContactState::kContactNotDetected) {}
++    ContactState mContactState;
++};
++
++#endif // CONTACT_SENSOR_MANAGER_H

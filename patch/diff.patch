@@ -1,0 +1,90 @@
+diff --git a/examples/contact-sensor-app/linux/BUILD.gn b/examples/contact-sensor-app/linux/BUILD.gn
+index 6c0128d32d..a91f1ff604 100644
+--- a/examples/contact-sensor-app/linux/BUILD.gn
++++ b/examples/contact-sensor-app/linux/BUILD.gn
+@@ -30,6 +30,8 @@ config("includes") {
+ executable("contact-sensor-app") {
+   sources = [
+     "include/CHIPProjectAppConfig.h",
++    "include/ContactSensorManager.h",
++    "ContactSensorManager.cpp",
+     "main.cpp",
+   ]
+ 
+diff --git a/examples/contact-sensor-app/linux/main.cpp b/examples/contact-sensor-app/linux/main.cpp
+index 0b520bdd53..b3ee389157 100644
+--- a/examples/contact-sensor-app/linux/main.cpp
++++ b/examples/contact-sensor-app/linux/main.cpp
+@@ -17,39 +17,55 @@
+  */
+ 
+ #include <AppMain.h>
+-#include <app/util/af.h>
+ #include <platform/CHIPDeviceConfig.h>
+-
+-#if defined(CHIP_IMGUI_ENABLED) && CHIP_IMGUI_ENABLED
+-#include <imgui_ui/ui.h>
+-#include <imgui_ui/windows/boolean_state.h>
+-#include <imgui_ui/windows/occupancy_sensing.h>
+-#include <imgui_ui/windows/qrcode.h>
+-#endif
++#include <iostream>
++#include <thread>
++#include <chrono>
++#include "ContactSensorManager.h"
+ 
+ using namespace chip;
+ using namespace chip::app;
+ using namespace chip::app::Clusters;
++using namespace std::chrono_literals;
+ 
+ void ApplicationInit() {}
+ 
+ void ApplicationShutdown() {}
+ 
++void ToggleSensorState()
++{
++    static bool sensorState = false;
++    sensorState = !sensorState;
++
++    if (sensorState)
++    {
++        ContactSensorManager::GetInstance().SetContactState(ContactSensorManager::ContactState::kContactDetected);
++        std::cout << "Sensor ON" << std::endl;
++    }
++    else
++    {
++        ContactSensorManager::GetInstance().SetContactState(ContactSensorManager::ContactState::kContactNotDetected);
++        std::cout << "Sensor OFF" << std::endl;
++    }
++}
++
+ int main(int argc, char * argv[])
+ {
+     VerifyOrDie(ChipLinuxAppInit(argc, argv) == 0);
+ 
+-#if defined(CHIP_IMGUI_ENABLED) && CHIP_IMGUI_ENABLED
+-    example::Ui::ImguiUi ui;
+-
+-    ui.AddWindow(std::make_unique<example::Ui::Windows::QRCode>());
+-    ui.AddWindow(std::make_unique<example::Ui::Windows::BooleanState>(chip::EndpointId(1), "Contact Sensor"));
+-    ui.AddWindow(std::make_unique<example::Ui::Windows::OccupancySensing>(chip::EndpointId(1), "Occupancy"));
++    // Toggle sensor status
++    std::thread sensorThread([]() {
++        while (true)
++        {
++            ToggleSensorState();
++            std::this_thread::sleep_for(10s); // Toggle in 10[sec]
++        }
++    });
+ 
+-    ChipLinuxAppMainLoop(&ui);
+-#else
+     ChipLinuxAppMainLoop();
+-#endif
++
++    sensorThread.join();
+ 
+     return 0;
+ }
++
