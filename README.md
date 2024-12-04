@@ -12,6 +12,7 @@ Current status: No AI camera integrated. Only "psuedo" contact sensor works.
 
 - raspberryPi 4B 4GB (Recommend 8GB)
 - 64GB SD card
+  - 32GB is too small. Required 64GB or more.
 - RaspberryPi AI Cam
 - RaspberryPi OS 64bit (latest)
 - Matter SDK v1.3.0.0
