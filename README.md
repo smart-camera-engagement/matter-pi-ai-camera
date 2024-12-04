@@ -126,7 +126,7 @@ cd connectedhomeip
 git submodule update --init
 ```
 
-## Install devendencies
+## Install dependencies
 
 - Reference: https://github.com/project-chip/connectedhomeip/blob/v1.3.0.0/docs/guides/BUILDING.md
 
