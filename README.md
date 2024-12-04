@@ -1,4 +1,4 @@
-# Setup RaspberryPi + AI Camera as a Matter device (HomeKit)
+# RaspberryPi + AI Camera as a Matter device (HomeKit)
 
 This document explains how to setup RaspberryPi as Matter contact sensor device with PI AI Camera.
 
@@ -137,8 +137,9 @@ sudo apt-get install git gcc g++ pkg-config libssl-dev libdbus-1-dev \
 
 ## Apply patch for contact sensor
 
+copy [new_file.patch](./patch/new_file.patch) and [diff.patch](./patch/diff.patch) to connectedhomeip and apply patch.
+
 ```bash
-copy contact_sensor_test.patch to connectedhomeip
 cd connectedhomeip
 git apply new_file.patch
 git apply diff.patch
