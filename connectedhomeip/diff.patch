@@ -1,0 +1,297 @@
+diff --git a/examples/contact-sensor-app/linux/BUILD.gn b/examples/contact-sensor-app/linux/BUILD.gn
+index 6c0128d32d..bd78d648db 100644
+--- a/examples/contact-sensor-app/linux/BUILD.gn
++++ b/examples/contact-sensor-app/linux/BUILD.gn
+@@ -30,6 +30,10 @@ config("includes") {
+ executable("contact-sensor-app") {
+   sources = [
+     "include/CHIPProjectAppConfig.h",
++    "include/ContactSensorManager.h",
++    "include/SharedMemory.hpp",
++    "ContactSensorManager.cpp",
++    "SharedMemory.cpp",
+     "main.cpp",
+   ]
+ 
+diff --git a/examples/contact-sensor-app/linux/ContactSensorManager.cpp b/examples/contact-sensor-app/linux/ContactSensorManager.cpp
+new file mode 100644
+index 0000000000..3fabbf9d73
+--- /dev/null
++++ b/examples/contact-sensor-app/linux/ContactSensorManager.cpp
+@@ -0,0 +1,42 @@
++#include "ContactSensorManager.h"
++#include <app/util/attribute-storage.h>
++#include <app/ConcreteAttributePath.h>
++#include <lib/core/CHIPError.h>
++#include <app/clusters/boolean-state-configuration-server/boolean-state-configuration-server.h>
++#include <platform/CHIPDeviceLayer.h>
++#include <iostream>
++
++using namespace chip;
++using namespace chip::app;
++
++CHIP_ERROR ContactSensorManager::SetContactState(ContactState state)
++{
++    mContactState = state;
++
++    if (state == ContactState::kContactDetected)
++    {
++        std::cout << "Contact detected" << std::endl;
++    }
++    else
++    {
++        std::cout << "Contact not detected" << std::endl;
++    }
++    uint8_t value = (state == ContactState::kContactDetected) ? 1 : 0;
++
++	chip::DeviceLayer::PlatformMgr().LockChipStack();
++    Protocols::InteractionModel::Status status = app::Clusters::BooleanState::Attributes::StateValue::Set(1, value);
++	chip::DeviceLayer::PlatformMgr().UnlockChipStack();
++
++    if (status != Protocols::InteractionModel::Status::Success)
++    {
++        std::cerr << "Failed to update attribute: " << std::endl;
++		return CHIP_ERROR_INTERNAL;
++    }
++	
++    return CHIP_NO_ERROR;
++}
++
++ContactSensorManager::ContactState ContactSensorManager::GetContactState() const
++{
++    return mContactState;
++}
+diff --git a/examples/contact-sensor-app/linux/SharedMemory.cpp b/examples/contact-sensor-app/linux/SharedMemory.cpp
+new file mode 100644
+index 0000000000..8204489522
+--- /dev/null
++++ b/examples/contact-sensor-app/linux/SharedMemory.cpp
+@@ -0,0 +1,59 @@
++// SharedMemory.cpp
++#include "SharedMemory.hpp"
++
++SharedMemory::SharedMemory(const char* shm_namea, const char* sem_namea)
++    : shm_name(shm_namea), sem_name(sem_namea), shm_fd(-1), ptr(nullptr), sem(nullptr) {
++
++    shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
++    if (shm_fd == -1) {
++        perror("shm_open");
++//        throw std::runtime_error("Failed to open shared memory");
++    }
++
++    if (ftruncate(shm_fd, SHM_SIZE) == -1) {
++        perror("ftruncate");
++//        throw std::runtime_error("Failed to set shared memory size");
++    }
++
++    ptr = mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
++    if (ptr == MAP_FAILED) {
++        perror("mmap");
++//        throw std::runtime_error("Failed to map shared memory");
++    }
++
++    sem = sem_open(sem_name, O_CREAT, 0666, 0);
++    if (sem == SEM_FAILED) {
++        perror("sem_open");
++//        throw std::runtime_error("Failed to open semaphore");
++    }
++}
++
++SharedMemory::~SharedMemory() {
++    if (ptr != nullptr && ptr != MAP_FAILED) {
++        munmap(ptr, SHM_SIZE);
++    }
++
++    if (shm_fd != -1) {
++        close(shm_fd);
++    }
++
++    if (sem != nullptr && sem != SEM_FAILED) {
++        sem_close(sem);
++    }
++}
++
++bool SharedMemory::readBool() {
++    return *static_cast<bool*>(ptr);
++}
++
++void SharedMemory::writeBool(bool value) {
++    *static_cast<bool*>(ptr) = value;
++}
++
++void SharedMemory::wait() {
++    sem_wait(sem);
++}
++
++void SharedMemory::post() {
++    sem_post(sem);
++}
+diff --git a/examples/contact-sensor-app/linux/include/ContactSensorManager.h b/examples/contact-sensor-app/linux/include/ContactSensorManager.h
+new file mode 100644
+index 0000000000..3786102122
+--- /dev/null
++++ b/examples/contact-sensor-app/linux/include/ContactSensorManager.h
+@@ -0,0 +1,30 @@
++#ifndef CONTACT_SENSOR_MANAGER_H
++#define CONTACT_SENSOR_MANAGER_H
++
++#include <app/util/af-types.h>
++#include <lib/core/CHIPError.h>
++
++class ContactSensorManager
++{
++public:
++    enum class ContactState
++    {
++        kContactDetected,
++        kContactNotDetected
++    };
++
++    static ContactSensorManager & GetInstance()
++    {
++        static ContactSensorManager instance;
++        return instance;
++    }
++
++    CHIP_ERROR SetContactState(ContactState state);
++    ContactState GetContactState() const;
++
++private:
++    ContactSensorManager() : mContactState(ContactState::kContactNotDetected) {}
++    ContactState mContactState;
++};
++
++#endif // CONTACT_SENSOR_MANAGER_H
+diff --git a/examples/contact-sensor-app/linux/include/SharedMemory.hpp b/examples/contact-sensor-app/linux/include/SharedMemory.hpp
+new file mode 100644
+index 0000000000..2555176527
+--- /dev/null
++++ b/examples/contact-sensor-app/linux/include/SharedMemory.hpp
+@@ -0,0 +1,31 @@
++// SharedMemory.hpp
++#ifndef SHAREDMEMORY_HPP
++#define SHAREDMEMORY_HPP
++
++#include <sys/mman.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <unistd.h>
++#include <semaphore.h>
++#include <iostream>
++
++class SharedMemory {
++public:
++    SharedMemory(const char* shm_name, const char* sem_name);
++    ~SharedMemory();
++
++    bool readBool();
++    void writeBool(bool value);
++    void wait();
++    void post();
++
++private:
++    const char* shm_name;
++    const char* sem_name;
++    int shm_fd;
++    void* ptr;
++    sem_t* sem;
++    static const size_t SHM_SIZE = sizeof(bool);
++};
++
++#endif // SHAREDMEMORY_HPP
+diff --git a/examples/contact-sensor-app/linux/main.cpp b/examples/contact-sensor-app/linux/main.cpp
+index 0b520bdd53..a16eed56d0 100644
+--- a/examples/contact-sensor-app/linux/main.cpp
++++ b/examples/contact-sensor-app/linux/main.cpp
+@@ -17,39 +17,74 @@
+  */
+ 
+ #include <AppMain.h>
+-#include <app/util/af.h>
+ #include <platform/CHIPDeviceConfig.h>
+-
+-#if defined(CHIP_IMGUI_ENABLED) && CHIP_IMGUI_ENABLED
+-#include <imgui_ui/ui.h>
+-#include <imgui_ui/windows/boolean_state.h>
+-#include <imgui_ui/windows/occupancy_sensing.h>
+-#include <imgui_ui/windows/qrcode.h>
+-#endif
++#include <iostream>
++#include <thread>
++#include <chrono>
++#include "ContactSensorManager.h"
++#include "SharedMemory.hpp"
+ 
+ using namespace chip;
+ using namespace chip::app;
+ using namespace chip::app::Clusters;
++using namespace std::chrono_literals;
+ 
+ void ApplicationInit() {}
+ 
+ void ApplicationShutdown() {}
+ 
++void ToggleSensorState()
++{
++    static bool sensorState = false;
++    sensorState = !sensorState;
++
++    if (sensorState)
++    {
++        ContactSensorManager::GetInstance().SetContactState(ContactSensorManager::ContactState::kContactDetected);
++        std::cout << "Sensor ON" << std::endl;
++    }
++    else
++    {
++        ContactSensorManager::GetInstance().SetContactState(ContactSensorManager::ContactState::kContactNotDetected);
++        std::cout << "Sensor OFF" << std::endl;
++    }
++}
++
++void ReadSharedMemory()
++{
++    SharedMemory shm("/my_shared_memory", "/my_semaphore");
++    std::cout << "Waiting for data..." << std::endl;
++    shm.wait();  // セマフォを待機
++    bool received_value = shm.readBool();
++
++    if (received_value)
++    {
++        ContactSensorManager::GetInstance().SetContactState(ContactSensorManager::ContactState::kContactDetected);
++        std::cout << "Sensor ON" << std::endl;
++    }
++    else
++    {
++        ContactSensorManager::GetInstance().SetContactState(ContactSensorManager::ContactState::kContactNotDetected);
++        std::cout << "Sensor OFF" << std::endl;
++    }
++}
++
+ int main(int argc, char * argv[])
+ {
+     VerifyOrDie(ChipLinuxAppInit(argc, argv) == 0);
+ 
+-#if defined(CHIP_IMGUI_ENABLED) && CHIP_IMGUI_ENABLED
+-    example::Ui::ImguiUi ui;
++    std::thread sensorThread([]() {
++        while (true)
++        {
++            ReadSharedMemory();
++            std::this_thread::sleep_for(1s);
++        }
++    });
+ 
+-    ui.AddWindow(std::make_unique<example::Ui::Windows::QRCode>());
+-    ui.AddWindow(std::make_unique<example::Ui::Windows::BooleanState>(chip::EndpointId(1), "Contact Sensor"));
+-    ui.AddWindow(std::make_unique<example::Ui::Windows::OccupancySensing>(chip::EndpointId(1), "Occupancy"));
+-
+-    ChipLinuxAppMainLoop(&ui);
+-#else
+     ChipLinuxAppMainLoop();
+-#endif
++
++    sensorThread.join();
+ 
+     return 0;
+ }
++

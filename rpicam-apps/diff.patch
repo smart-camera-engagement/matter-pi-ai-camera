@@ -1,0 +1,154 @@
+diff --git a/post_processing_stages/imx500/SharedMemory.cpp b/post_processing_stages/imx500/SharedMemory.cpp
+new file mode 100644
+index 0000000..e4dd37a
+--- /dev/null
++++ b/post_processing_stages/imx500/SharedMemory.cpp
+@@ -0,0 +1,59 @@
++// SharedMemory.cpp
++#include "SharedMemory.hpp"
++
++SharedMemory::SharedMemory(const char* shm_name, const char* sem_name)
++    : shm_name(shm_name), sem_name(sem_name), shm_fd(-1), ptr(nullptr), sem(nullptr) {
++
++    shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
++    if (shm_fd == -1) {
++        perror("shm_open");
++        throw std::runtime_error("Failed to open shared memory");
++    }
++
++    if (ftruncate(shm_fd, SHM_SIZE) == -1) {
++        perror("ftruncate");
++        throw std::runtime_error("Failed to set shared memory size");
++    }
++
++    ptr = mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
++    if (ptr == MAP_FAILED) {
++        perror("mmap");
++        throw std::runtime_error("Failed to map shared memory");
++    }
++
++    sem = sem_open(sem_name, O_CREAT, 0666, 0);
++    if (sem == SEM_FAILED) {
++        perror("sem_open");
++        throw std::runtime_error("Failed to open semaphore");
++    }
++}
++
++SharedMemory::~SharedMemory() {
++    if (ptr != nullptr && ptr != MAP_FAILED) {
++        munmap(ptr, SHM_SIZE);
++    }
++
++    if (shm_fd != -1) {
++        close(shm_fd);
++    }
++
++    if (sem != nullptr && sem != SEM_FAILED) {
++        sem_close(sem);
++    }
++}
++
++bool SharedMemory::readBool() {
++    return *static_cast<bool*>(ptr);
++}
++
++void SharedMemory::writeBool(bool value) {
++    *static_cast<bool*>(ptr) = value;
++}
++
++void SharedMemory::wait() {
++    sem_wait(sem);
++}
++
++void SharedMemory::post() {
++    sem_post(sem);
++}
+diff --git a/post_processing_stages/imx500/SharedMemory.hpp b/post_processing_stages/imx500/SharedMemory.hpp
+new file mode 100644
+index 0000000..2555176
+--- /dev/null
++++ b/post_processing_stages/imx500/SharedMemory.hpp
+@@ -0,0 +1,31 @@
++// SharedMemory.hpp
++#ifndef SHAREDMEMORY_HPP
++#define SHAREDMEMORY_HPP
++
++#include <sys/mman.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <unistd.h>
++#include <semaphore.h>
++#include <iostream>
++
++class SharedMemory {
++public:
++    SharedMemory(const char* shm_name, const char* sem_name);
++    ~SharedMemory();
++
++    bool readBool();
++    void writeBool(bool value);
++    void wait();
++    void post();
++
++private:
++    const char* shm_name;
++    const char* sem_name;
++    int shm_fd;
++    void* ptr;
++    sem_t* sem;
++    static const size_t SHM_SIZE = sizeof(bool);
++};
++
++#endif // SHAREDMEMORY_HPP
+diff --git a/post_processing_stages/imx500/imx500_object_detection.cpp b/post_processing_stages/imx500/imx500_object_detection.cpp
+index d3f74b3..a66954f 100644
+--- a/post_processing_stages/imx500/imx500_object_detection.cpp
++++ b/post_processing_stages/imx500/imx500_object_detection.cpp
+@@ -20,6 +20,8 @@
+ 
+ #include "imx500_post_processing_stage.hpp"
+ 
++#include "SharedMemory.hpp"
++
+ using Rectangle = libcamera::Rectangle;
+ using Size = libcamera::Size;
+ namespace controls = libcamera::controls;
+@@ -251,6 +253,8 @@ int ObjectDetection::processOutputTensor(std::vector<Detection> &objects, const
+ 		return -1;
+ 	}
+ 
++	bool human_present = false;
++	
+ 	for (unsigned int i = 0; i < std::min(output.num_detections, max_detections_); i++)
+ 	{
+ 		uint8_t class_index = (uint8_t)output.classes[i];
+@@ -268,7 +272,17 @@ int ObjectDetection::processOutputTensor(std::vector<Detection> &objects, const
+ 
+ 		objects.emplace_back(class_index, classes_[class_index], output.scores[i],
+ 							 obj_scaled.x, obj_scaled.y, obj_scaled.width, obj_scaled.height);
++
++		if(class_index == 0 && output.scores[i] > 0.7)
++		{
++			human_present = true;
++		}
+ 	}
++	
++    SharedMemory shm("/my_shared_memory", "/my_semaphore");
++    shm.writeBool(human_present);
++    std::cout << "Sent bool value: " << std::boolalpha << human_present << std::endl;
++    shm.post();
+ 
+ 	LOG(2, "Number of objects detected: " << objects.size());
+ 	for (unsigned i = 0; i < objects.size(); i++)
+diff --git a/post_processing_stages/imx500/meson.build b/post_processing_stages/imx500/meson.build
+index 985fbc8..ea115fa 100644
+--- a/post_processing_stages/imx500/meson.build
++++ b/post_processing_stages/imx500/meson.build
+@@ -5,6 +5,7 @@ imx500_postprocessing_src = files([
+     'imx500_object_detection.cpp',
+     # Posenet
+     'imx500_posenet.cpp',
++    'SharedMemory.cpp'
+ ])
+ 
+ postproc_assets += files([
