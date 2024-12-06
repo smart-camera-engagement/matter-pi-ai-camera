@@ -15,7 +15,7 @@ cd rpicam-apps
 
 ## Apply patch
 
-- Copy [diff.patch](diff.patch) to <cloned dir>
+- Copy [diff.patch](diff.patch) to \<cloned dir\>/rpicam-apps
 - Apply patch
 
     ```bash
