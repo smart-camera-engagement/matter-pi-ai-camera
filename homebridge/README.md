@@ -1,6 +1,8 @@
-# Setup homebridge for FFmpeg
+# homebridge and FFmpeg plugin
 
-homebridge and FFmpeg for sending still image to HomeKit.
+Features:
+
+- homebridge and FFmpeg plugin for sending still image to HomeKit.
 
 ## Install homebridge
 

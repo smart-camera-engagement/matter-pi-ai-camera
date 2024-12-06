@@ -1,4 +1,4 @@
-# rpicam-apps setup
+# rpicam-apps
 
 Features:
 
