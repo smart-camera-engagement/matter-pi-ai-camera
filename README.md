@@ -84,6 +84,8 @@ It seems that it is required to perform firmware update for detecting AI Cam. Pe
 
 - Reference: https://www.raspberrypi.com/documentation/accessories/ai-camera.html
 
+This is just for testing PI AI Camera is working with pre-installed rpicam-apps. The pre-installed rpicam-apps will be deleted later. This step can be skipped.
+
 1. Update
 
     ```bash
@@ -101,31 +103,6 @@ It seems that it is required to perform firmware update for detecting AI Cam. Pe
 
     ```bash
     rpicam-hello -t 0s --post-process-file /usr/share/rpi-camera-assets/imx500_mobilenet_ssd.json --viewfinder-width 1920 --viewfinder-height 1080 --framerate 30
-    ```
-
-## Increase swap
-
-ninja command consume memory. Increase swap size from 512MB to 2GB.
-
-1. Check current swap size and open ddphys-swapfile file.
-
-    ```bash
-    free
-    sudo dphys-swapfile swapoff
-    sudo vi /etc/dphys-swapfile
-    ```
-
-2. Modify swap size to 2GB.
-
-    - Before modification : CONF_SWAPSIZE=512
-    - After modification  : CONF_SWAPSIZE=2048
-
-3. Apply change.
-
-    ```bash
-    sudo dphys-swapfile setup
-    sudo dphys-swapfile swapon
-    free
     ```
 
 ## Setup homebridge
