@@ -6,6 +6,31 @@ Features:
 - Read Opened/Closed status from shared memory.
 - Send Opened/Closed status to HomeKit
 
+## Increase swap
+
+ninja build command consume memory. Increase swap size from 512MB to 2GB.
+
+1. Check current swap size and open ddphys-swapfile file.
+
+    ```bash
+    free
+    sudo dphys-swapfile swapoff
+    sudo vi /etc/dphys-swapfile
+    ```
+
+2. Modify swap size to 2GB.
+
+    - Before modification : CONF_SWAPSIZE=512
+    - After modification  : CONF_SWAPSIZE=2048
+
+3. Apply change.
+
+    ```bash
+    sudo dphys-swapfile setup
+    sudo dphys-swapfile swapon
+    free
+    ```
+
 ## Clone source
 
 - Reference: https://github.com/project-chip/connectedhomeip/blob/v1.3.0.0/docs/guides/BUILDING.md
@@ -21,14 +46,14 @@ git submodule update --init
 - Reference: https://github.com/project-chip/connectedhomeip/blob/v1.3.0.0/docs/guides/BUILDING.md
 
 ```bash
-sudo apt-get install git gcc g++ pkg-config libssl-dev libdbus-1-dev \
-     libglib2.0-dev libavahi-client-dev ninja-build python3-venv python3-dev \
+sudo apt-get install -y git gcc g++ pkg-config libssl-dev libdbus-1-dev \
+     libglib2.0-dev libavahi-client-dev ninja-build python3 python3-venv python3-dev \
      python3-pip unzip libgirepository1.0-dev libcairo2-dev libreadline-dev
 ```
 
 ## Apply patch for contact sensor
 
-copy [new_file.patch](./patch/new_file.patch) and [diff.patch](./patch/diff.patch) to connectedhomeip and apply patch.
+copy [diff.patch](./diff.patch) to connectedhomeip directory and apply patch.
 
 ```bash
 cd connectedhomeip
