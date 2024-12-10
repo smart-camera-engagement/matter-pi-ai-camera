@@ -6,8 +6,7 @@ This document explains how to setup RaspberryPi as Matter contact sensor device 
 
 ![Block Diagram](./resources/block_diagram.PNG.jpg)
 
-- Run ObjectDetection AI model by calling rpicam-still. If human is detected, send ON(Closed) status to HomeKit and if no human, send OFF(Opened) status as a Matter contact sensor.
-- Send still image to HomeKit using homebridge and FFmpeg plugin.
+- Run ObjectDetection AI model by calling rpicam-apps. If human is detected, send ON(Closed) status to HomeKit and if no human, send OFF(Opened) status as a Matter contact sensor.
 - It is also possible to control other HomeKit devices based on human presence status by automation feature in HomeKit app. (Not documented in this document)
 
 ## Tested environment
@@ -104,10 +103,6 @@ This is just for testing PI AI Camera is working with pre-installed rpicam-apps.
     ```bash
     rpicam-hello -t 0s --post-process-file /usr/share/rpi-camera-assets/imx500_mobilenet_ssd.json --viewfinder-width 1920 --viewfinder-height 1080 --framerate 30
     ```
-
-## Setup homebridge
-
-Refer : [README.md](./homebridge/README.md)
 
 ## Setup rpicam-apps
 

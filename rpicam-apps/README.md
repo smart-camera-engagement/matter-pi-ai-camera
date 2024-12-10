@@ -3,8 +3,7 @@
 Features:
 
 - Run ObjectDetection with calling rpicam-still
-- When human presence, set boolean value to a shared memory.
-- Update jpg image for sending the latest image to HomeKit via homebridge.
+- Based on human presence status, set boolean value to a shared memory.
 
 ## Remove pre-installed rpicam-apps
 
@@ -100,23 +99,3 @@ For detecting human presence, run rpicam-hello or other rpicam-apps with mobilen
 ```bash
 rpicam-hello -t 0s --post-process-file /usr/share/rpi-camera-assets/imx500_mobilenet_ssd.json --viewfinder-width 1920 --viewfinder-height 1080 --framerate 30
 ```
-
-## Run script (only for image sending feature)
-
-This is for image sending feature. It seems that homebridge plugins can't access to /home/pi directory because homebridge is run as **homebridge** user. In order to send latest image to HomeKit, the script run in /home/homebridge directory. Here are steps.
-
-- Create required directories
-
-    ```bash
-    sudo mkdir /home/homebridge/images
-    sudo mkdir /home/homebridge/images/timelapse
-    cd /home/homebridge/images
-    ```
-
-- Copy [start_human_detection.sh](./start_human_detection.sh) to /home/homebridge/images.
-
-- Run script
-
-    ```bash
-    sudo ./start_human_detection.sh 
-    ```
