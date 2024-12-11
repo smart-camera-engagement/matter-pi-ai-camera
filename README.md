@@ -15,7 +15,7 @@ This document explains how to setup RaspberryPi as Matter contact sensor device 
 - 64GB SD card
   - 32GB is too small. Required 64GB or more.
 - RaspberryPi AI Cam
-- RaspberryPi OS 64bit (latest)
+- RaspberryPi OS 64bit (Release 5.5, November 2024)
 - Matter SDK v1.3.0.0
 - rpicam-apps v1.5.3
 
@@ -83,7 +83,7 @@ It seems that it is required to perform firmware update for detecting AI Cam. Pe
 
 - Reference: https://www.raspberrypi.com/documentation/accessories/ai-camera.html
 
-This is just for testing PI AI Camera is working with pre-installed rpicam-apps. The pre-installed rpicam-apps will be deleted later. This step can be skipped.
+This is just for testing PI AI Camera working with pre-installed rpicam-apps. The pre-installed rpicam-apps will be deleted later. This step can be skipped.
 
 1. Update
 
