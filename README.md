@@ -83,8 +83,6 @@ It seems that it is required to perform firmware update for detecting AI Cam. Pe
 
 - Reference: https://www.raspberrypi.com/documentation/accessories/ai-camera.html
 
-This is just for testing PI AI Camera working with pre-installed rpicam-apps. The pre-installed rpicam-apps will be deleted later. This step can be skipped.
-
 1. Update
 
     ```bash

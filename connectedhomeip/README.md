@@ -1,10 +1,18 @@
 
 # Matter contact sensor
 
+- Reference: https://github.com/project-chip/connectedhomeip/blob/v1.3.0.0/docs/guides/BUILDING.md
+
 Features:
 
 - Read Opened/Closed status from shared memory.
 - Send Opened/Closed status to HomeKit
+
+## Update
+
+```bash
+sudo apt update && sudo apt full-upgrade
+```
 
 ## Increase swap
 
@@ -33,8 +41,6 @@ ninja build command consume memory. Increase swap size from 512MB to 2GB.
 
 ## Clone source
 
-- Reference: https://github.com/project-chip/connectedhomeip/blob/v1.3.0.0/docs/guides/BUILDING.md
-
 ```bash
 git clone --recurse-submodules https://github.com/project-chip/connectedhomeip.git -b v1.3.0.0
 cd connectedhomeip
@@ -42,8 +48,6 @@ git submodule update --init
 ```
 
 ## Install dependencies
-
-- Reference: https://github.com/project-chip/connectedhomeip/blob/v1.3.0.0/docs/guides/BUILDING.md
 
 ```bash
 sudo apt-get install -y git gcc g++ pkg-config libssl-dev libdbus-1-dev \
@@ -63,7 +67,6 @@ git apply diff.patch
 ## Environment setup
 
 ```bash
-source ./scripts/bootstrap.sh
 source ./scripts/activate.sh
 ```
 
