@@ -200,22 +200,21 @@ index 0000000000..2555176527
 +
 +#endif // SHAREDMEMORY_HPP
 diff --git a/examples/contact-sensor-app/linux/main.cpp b/examples/contact-sensor-app/linux/main.cpp
-index 0b520bdd53..a16eed56d0 100644
+index 0b520bdd53..8c728731fe 100644
 --- a/examples/contact-sensor-app/linux/main.cpp
 +++ b/examples/contact-sensor-app/linux/main.cpp
-@@ -17,39 +17,74 @@
+@@ -17,7 +17,6 @@
   */
  
  #include <AppMain.h>
 -#include <app/util/af.h>
  #include <platform/CHIPDeviceConfig.h>
--
--#if defined(CHIP_IMGUI_ENABLED) && CHIP_IMGUI_ENABLED
--#include <imgui_ui/ui.h>
--#include <imgui_ui/windows/boolean_state.h>
--#include <imgui_ui/windows/occupancy_sensing.h>
--#include <imgui_ui/windows/qrcode.h>
--#endif
+ 
+ #if defined(CHIP_IMGUI_ENABLED) && CHIP_IMGUI_ENABLED
+@@ -26,15 +25,40 @@
+ #include <imgui_ui/windows/occupancy_sensing.h>
+ #include <imgui_ui/windows/qrcode.h>
+ #endif
 +#include <iostream>
 +#include <thread>
 +#include <chrono>
@@ -231,28 +230,11 @@ index 0b520bdd53..a16eed56d0 100644
  
  void ApplicationShutdown() {}
  
-+void ToggleSensorState()
-+{
-+    static bool sensorState = false;
-+    sensorState = !sensorState;
-+
-+    if (sensorState)
-+    {
-+        ContactSensorManager::GetInstance().SetContactState(ContactSensorManager::ContactState::kContactDetected);
-+        std::cout << "Sensor ON" << std::endl;
-+    }
-+    else
-+    {
-+        ContactSensorManager::GetInstance().SetContactState(ContactSensorManager::ContactState::kContactNotDetected);
-+        std::cout << "Sensor OFF" << std::endl;
-+    }
-+}
-+
 +void ReadSharedMemory()
 +{
 +    SharedMemory shm("/my_shared_memory", "/my_semaphore");
 +    std::cout << "Waiting for data..." << std::endl;
-+    shm.wait();  // セマフォを待機
++    shm.wait();
 +    bool received_value = shm.readBool();
 +
 +    if (received_value)
@@ -270,9 +252,10 @@ index 0b520bdd53..a16eed56d0 100644
  int main(int argc, char * argv[])
  {
      VerifyOrDie(ChipLinuxAppInit(argc, argv) == 0);
+@@ -48,8 +72,19 @@ int main(int argc, char * argv[])
  
--#if defined(CHIP_IMGUI_ENABLED) && CHIP_IMGUI_ENABLED
--    example::Ui::ImguiUi ui;
+     ChipLinuxAppMainLoop(&ui);
+ #else
 +    std::thread sensorThread([]() {
 +        while (true)
 +        {
@@ -280,17 +263,11 @@ index 0b520bdd53..a16eed56d0 100644
 +            std::this_thread::sleep_for(1s);
 +        }
 +    });
- 
--    ui.AddWindow(std::make_unique<example::Ui::Windows::QRCode>());
--    ui.AddWindow(std::make_unique<example::Ui::Windows::BooleanState>(chip::EndpointId(1), "Contact Sensor"));
--    ui.AddWindow(std::make_unique<example::Ui::Windows::OccupancySensing>(chip::EndpointId(1), "Occupancy"));
--
--    ChipLinuxAppMainLoop(&ui);
--#else
++
      ChipLinuxAppMainLoop();
--#endif
 +
 +    sensorThread.join();
+ #endif
  
      return 0;
  }
